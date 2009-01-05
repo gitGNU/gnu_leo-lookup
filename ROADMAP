@@ -1,0 +1,40 @@
+Roadmap of leo-lookup:
+======================
+
+Target Group: Normal User
+Programming language: Python
+User Interface: GUI, realized with GTK+
+
+
+Version	| Description
+--------------------------------
+0.1	 1 Basic gui
+	   - text field for translations
+	 2 Basic functionality
+	   - english to german lookup using urllib2 (see http://docs.python.org/howto/urllib2.html)
+	   - basic logging functionality using module logging (see http://docs.python.org/library/logging.html)
+
+0.2	 1 GUI enhancements
+	 - list box for translations
+	 - easy switching between languages and directions
+	 - more sophisticated graphics
+	   - flags for languages (e.g. German flag for German language)
+	 2 Function enhancemants
+	 -  all languages supported by LEO should be accessible
+
+0.3	 Plugin interface
+	 - sample plugins 
+	   - add2jMemorize
+	   - other dictionaries
+	 Basic error catching and handling
+
+0.4	 Stable and extensible interface
+	 - About dialog
+	 - Help
+	   - System
+	   - User Documentation
+	   - Technical documentation
+	 - Bugfixes
+	 - Enhanced error catching and handling
+	 - (optional) GNU gettext interface
+	  
