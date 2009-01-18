@@ -1,0 +1,8 @@
+The following bugs are known to occur when using leo-lookup version 0.01:
+
+- Parsing of response by http://dict.leo.org/ is of bad quality
+
+
+If you encounter any bugs, not listed here, please contact one of the authors.
+Thanks.
+

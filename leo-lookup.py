@@ -26,13 +26,19 @@ import sys
 import gtk
 import gobject
 
-# import other needed packages
+# import other needed or useful packages
 import urllib2
+import urllib
+import logging
+import formatter
+# import own modules
+import llresultextractor
 
 class leolookup:
     """Represents the program, with the window."""
     version = "0.01dev"
 
+    url = "http://dict.leo.org/ende"
     supportedfromLangs = [ "German", "English" ]
     supportedtoLangs = [ "German", "English" ]
 
@@ -78,13 +84,20 @@ class leolookup:
         self.lookup.connect("clicked", self.onTransClick)
         self.box.pack_start(self.lookup, False, False, 0)
         
-        self.meanings = gtk.ListStore(str)
+        self.meanings = gtk.ListStore(str,str)
         self.listOfMeanings = gtk.TreeView(self.meanings)
-        self.listOfMeaningsCol = gtk.TreeViewColumn("Meanings")
+        self.listOfMeaningsCol = gtk.TreeViewColumn("Foreign Lang.")
         self.listOfMeanings.append_column(self.listOfMeaningsCol)
         self.cell = gtk.CellRendererText()
         self.listOfMeaningsCol.pack_start(self.cell, True)
         self.listOfMeaningsCol.add_attribute(self.cell, 'text', 0)
+        
+        self.listOfMeaningsCol2 = gtk.TreeViewColumn("Familiar Lang.")
+        self.listOfMeanings.append_column(self.listOfMeaningsCol2)
+        cell2 = gtk.CellRendererText()
+        self.listOfMeaningsCol2.pack_start(cell2, True)
+        self.listOfMeaningsCol2.add_attribute(cell2, 'text', 1)
+        
 
         self.box.pack_start(self.listOfMeanings, True, True, 0)
 
@@ -98,9 +111,64 @@ class leolookup:
         temp = self.fromLang.get_active()
         self.fromLang.set_active(self.toLang.get_active())
         self.toLang.set_active(temp)
+
     def onTransClick(self, *args):
         """Will be executed if the user clicks on the "Translate"-button"""
-        pass
+
+        # initialize the logger
+        logger = logging.getLogger('onTransClick')
+        logger.setLevel(logging.DEBUG)
+
+        # define arguments to be committed to the webserver, like
+        # the word, we are looking up.
+        args = {"relink" :"off", 
+                "search" : self.word2lookup.get_text() }
+
+        data = urllib.urlencode(args)
+        # do communication with the webserver
+        request = urllib2.Request(self.url, data)
+        response = urllib2.urlopen(request)
+
+        # read the answer and save it in a local variable
+        html = response.read()
+
+        # get interesting things of the webpage
+        # IoUT = Index of Unmittelbare Treffer
+        # eoIT = end of Interesting Things
+        # soIT = start of ------"-------
+        # ipof = interesting piece of file
+        IoUT = html.find("Unmittelbare Treffer")
+        eoIT = html.find("</table>", IoUT)
+        soIT = html.rfind("<table", 1, eoIT)
+        ipof = html[soIT:eoIT+8] # +8 adds the closing table-tag
+        # print ipof
+        # print "IoUT: %s\teoIT: %s\tsoIT: %s\t" % (IoUT, eoIT, soIT)
+        # xml_data = "<?xml version=\"1.0\"?>" + self.getTagsWoAttr(ipof)
+        # print xml_data
+        # dom1 = parseString(xml_data)
+        format = formatter.NullFormatter()
+        myhtmlparser = llresultextractor.ResultExtractor(format)
+        myhtmlparser.feed(ipof)
+        myhtmlparser.close()
+        results = myhtmlparser.getResults()
+        self.meanings.clear()
+        print results
+        for pair in results:
+            self.meanings.append([pair[0],pair[1]])
+            print pair
+            
+     
+    def getTagsWoAttr(self, html):
+        cnt = html.count("=")
+        pos_attr = 0
+        print "%s attributes were found." % (cnt)
+        for z in range(0, cnt):
+            pos_attr_alt = pos_attr
+            pos_attr = html.find("=")
+            end_attr = html.find(" ", pos_attr)
+            beg_attr = html[pos_attr_alt:end_attr].rfind(" ")
+            html = html.replace(html[beg_attr:end_attr], "")
+        return html
     def destroyWin(self, *args):
         """Will be executed if the user wants to close the window."""
         gtk.main_quit()
