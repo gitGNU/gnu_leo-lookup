@@ -1,0 +1,8 @@
+Strategies of implementing the interface to dict.leo.org
+========================================================
+
+- Parse the html-page, which the user sees, by using leo through a browser
+
+- Investigate network behaviour of Lion (an application for Windows) to determine API of Leo
+
+- Contact LEO GmbH for documentation of the API

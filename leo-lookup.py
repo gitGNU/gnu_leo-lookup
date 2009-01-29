@@ -32,7 +32,7 @@ import urllib
 import logging
 import formatter
 # import own modules
-import llresultextractor
+import llresultextractor2
 
 class leolookup:
     """Represents the program, with the window."""
@@ -146,8 +146,7 @@ class leolookup:
         # xml_data = "<?xml version=\"1.0\"?>" + self.getTagsWoAttr(ipof)
         # print xml_data
         # dom1 = parseString(xml_data)
-        format = formatter.NullFormatter()
-        myhtmlparser = llresultextractor.ResultExtractor(format)
+        myhtmlparser = llresultextractor2.ResultExtractor()
         myhtmlparser.feed(ipof)
         myhtmlparser.close()
         results = myhtmlparser.getResults()

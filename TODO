@@ -13,7 +13,7 @@ d 1 Basic gui
    - english to german lookup using urllib2
     (see http://docs.python.org/howto/urllib2.html)
     	 - parse the output of the web request, using a htmllib.HTMLParser
-	   - use ll_resultextractor.ResultExtractor in leo-lookup.py
+	   d use ll_resultextractor2.ResultExtractor in leo-lookup.py
 	   - check results parsed by ResultExtractor
    - basic logging functionality using module logging
     (see http://docs.python.org/library/logging.html)
