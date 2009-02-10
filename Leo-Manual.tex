@@ -9,10 +9,11 @@
 \begin{document}
 
 \maketitle
-Following options of LEO have been revealed:
+Following options of LEO have been discovered:
 \begin{itemize}
 \item{search - Keyword for search}
 \item{relink - Controls wheter solutions are links or not}
+\item{searchLoc - Direction of search}
 \end{itemize}
 
 \section{The ``search'' option}
@@ -21,6 +22,24 @@ The value of the search option is the word, for what you are looking for.
 
 \section{The ``relink'' option}
 
+This option controls wheter words in the results should be weblinks. The target of the weblinks is the result page of the word on which you have clicked, before.\\
 The value of the relink option can be ``on'' or ``off'' without double-quotes.
+
+\section{The ``searchLoc'' option}
+
+The option ``searchLog'' controls in which direction you are looking for. For instance, if you want to know the German meaning of the word ``image'', searchLoc should be zero or -1, standing for English to German.
+
+Possible values:
+\begin{table}
+  \centering
+  \begin{tabular}{|l|l|}
+
+    \textbf{Value} & \textbf{Meaning}\\
+   -1     & English to German\\
+    0     & Automatic\\
+    1     & German to English\\
+  \end{tabular}
+  \caption{Values of searchLoc}
+\end{table}
 
 \end{document}

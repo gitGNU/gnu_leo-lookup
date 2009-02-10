@@ -1,4 +1,4 @@
-Strategies of implementing the interface to dict.leo.org
+Strategic plan of implementing interface to dict.leo.org
 ========================================================
 
 - Parse the html-page, which the user sees, by using leo through a browser

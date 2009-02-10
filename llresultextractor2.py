@@ -18,11 +18,14 @@
 #
 # Copyright (C) 2009 Markus Zeindl <mrszndl@googlemail.com>
 
+import logging
+
 class ResultExtractor():
     """Extracts the results gotten from dict.leo.org./ende"""
     def __init__(self):
         self.results = []
         self.closed = False
+        self.successes = ""
         pass
 
     def feed(self, data):
@@ -31,8 +34,9 @@ class ResultExtractor():
     
     def close(self):
         """Process the given data and get results."""
+        logger = logging.getLogger('llresultextractor2.close')
         self.closed = True
-        ignoreCount = 9
+        ignoreCount = 4
     
         # index of cell in the current row, only element nr. 1 and nr. 3 are useful 
         cellind = 0
@@ -40,7 +44,8 @@ class ResultExtractor():
         pos2 = 0
         result = ""
         pair = []
-        
+        successesFound = False
+        logging.debug("Input data:\n%s" % (self.input))
         # Skip useless header
         while(True):
             pos1 = self.input.find("<td", pos2)
@@ -49,6 +54,12 @@ class ResultExtractor():
                 break;
             if ignoreCount > 0:
                 ignoreCount = ignoreCount - 1
+                result = self.input[pos1:pos2]
+                if 'Treffer' in result and not successesFound:
+                    result = self.removeTags(result)
+                    self.successes = result.strip().split(" ")[0]
+                    logger.debug("result = '%s'\tself.successes = '%s'" %(result, self.successes))
+                    successesFound = True
             else:
                 break;
 
@@ -62,20 +73,27 @@ class ResultExtractor():
             else:
                 cellind = cellind + 1
             result = self.input[pos1:pos2]            
-            if "Verben und Verbzusammensetzungen" in result:
-                break;
+            if 'class="center"' in result or 'mehr &gt;&gt;' in result:
+                result = self.removeTags(result)
+                logger.debug("result = %s" % (result))
+                #break;
+                cellind = -1
+                continue;
             if cellind == 1 or cellind == 3: 
 
-                print "[DEBUG]idx = %d result = %s" % (cellind,result)
-                pair.append(self.removeTags(result))
+                logger.debug("idx = %d result = %s" % (cellind,result))
+                result = self.removeTags(result)
+                result = result.replace("&#160;", " ")
+                pair.append(result)
                 if len(pair) == 2:
-                    print "[DEBUG]: pair = %s" % (pair)
+                    logger.debug(" pair = %s" % (pair))
                     self.results.append(pair)
                     pair = []
                 isUseful = False
     def removeTags(self, data):
         """Removes html-tags from the given string and returns it."""
         # <td width="43%"><b>bla</b></td>
+        logger = logging.getLogger('llresultextractor2.removeTags')
         pos1 = 0
         pos2 = 0
         while(True):
@@ -84,19 +102,24 @@ class ResultExtractor():
             if pos1 == -1 or pos2 == -1:
                 break;
             data = data.replace(data[pos1:pos2+1],"",1)
-            print "[DEBUG]: data = %s" % (data)
+            logger.debug("data = %s" % (data))
         return data
     
     def getResults(self):
+        logger = logging.getLogger('llresultextractor2.getResults')
+        self.results.append(self.successes)
         return self.results
         pass
+
          
 if __name__ == "__main__":
     import formatter
     import sys
+    import logging
     if len(sys.argv) <  2:
         print "ResultExtractor2: Please specify a html-file to parse.\n"
         sys.exit()
+    logging.basicConfig(level=logging.debug)
     
     inst = ResultExtractor()
     file = open(sys.argv[1], "r")
@@ -106,4 +129,6 @@ if __name__ == "__main__":
     print inst.getResults()
     
     pass
+
+    
  

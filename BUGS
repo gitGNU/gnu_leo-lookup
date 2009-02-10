@@ -1,6 +1,10 @@
 The following bugs are known to occur when using leo-lookup version 0.01:
 
 - Parsing of response by http://dict.leo.org/ is of bad quality
+  - By looking for a translation of "Haus", there are empty entries at the bottom of the results
+    (This is caused by a missing </td> tag of the row in which "Beispiele" stands)
+  - There is no output by looking up some words like admit, attain
+
 
 
 If you encounter any bugs, not listed here, please contact one of the authors.

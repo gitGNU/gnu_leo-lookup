@@ -15,5 +15,5 @@ d 1 Basic gui
     	 - parse the output of the web request, using a htmllib.HTMLParser
 	   d use ll_resultextractor2.ResultExtractor in leo-lookup.py
 	   - check results parsed by ResultExtractor
-   - basic logging functionality using module logging
+   d basic logging functionality using module logging
     (see http://docs.python.org/library/logging.html)
