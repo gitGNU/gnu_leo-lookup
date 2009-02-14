@@ -40,7 +40,7 @@ LOGFILENAME = "leo-lookup.log"
 
 class leolookup:
     """Represents the program, with the window."""
-    version = "0.01dev"
+    version = "0.01"
 
     # searchLoc
     # -1        Englisch to German 

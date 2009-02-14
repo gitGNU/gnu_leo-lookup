@@ -45,6 +45,7 @@ class ResultExtractor():
         result = ""
         pair = []
         successesFound = False
+        end_trpos = 0
         logging.debug("Input data:\n%s" % (self.input))
         # Skip useless header
         while(True):
@@ -62,17 +63,27 @@ class ResultExtractor():
                     successesFound = True
             else:
                 break;
-
+        
+        
         while(True):
             pos1 = self.input.find("<td", pos2)
             pos2 = self.input.find("</td>", pos1)
+            end_trpos = self.input.find("</tr>", pos1)
             if pos1 == -1 or pos2 == -1:
                 break;
             if cellind == 4:
                 cellind = 0
             else:
                 cellind = cellind + 1
-            result = self.input[pos1:pos2]            
+            
+            if end_trpos > pos2:
+                result = self.input[pos1:pos2]            
+            elif end_trpos < pos2:
+                result = self.input[pos1:end_trpos]
+                logger.debug("result = '%s'\t'end_trpos = '%d'" % (result, end_trpos))
+                pos2 = end_trpos
+                #end_trpos = self.input.find("</tr>", end_trpos+1)
+
             if 'class="center"' in result or 'mehr &gt;&gt;' in result:
                 result = self.removeTags(result)
                 logger.debug("result = %s" % (result))
