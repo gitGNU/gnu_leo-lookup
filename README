@@ -12,25 +12,48 @@ Table of contents:
 1 Introduction
 --------------
 
-leo-lookup is a program to look up meanings of a word using the online dictionary called LEO. It is designed to be easy and extensible.
+leo-lookup is a program to look up meanings of a word using the online 
+dictionary called LEO. It is designed to be easy and extensible.
 
 2 Using leo-lookup
 ------------------
 
-(to be written soon ...)
+One the major goals of leo-lookup is to provide an easy to understand interface.
+
+
+To start leo-lookup just got through the following steps:
+
+ 1.  open a terminal window
+     (using Gnome, this is done with [ALT]-[F2], type "gnome-terminal" 
+      and a click on "Run")
+ 2.  change to the directory where the files of leo-lookup are stored 
+ 3.  run "leo-lookup.py" using "python ./leo-lookup.py"
+
+Of course you can easy this process by creating a shortcut on the desktop, 
+a panel or somewhere else
+     	    working directory: "/.../leo-lookup/"
+	    command: "python ./leo-lookup.py"
+	    description: anything you want
+
+Once you have started leo-lookup, 
 
 3 License
 ---------
 
-leo-lookup is licensed under the term of the GNU General Public License Version 3 or (at your opinion) any later version. For details see file "LICENSE" or read the terms of license online (http://www.gnu.org/).
+leo-lookup is licensed under the term of the GNU General Public License Version
+3 or (at your opinion) any later version. For details see file "LICENSE" or
+read the terms of license online (http://www.gnu.org/).
 
 4 Authors
 ---------
 
-Main author is Markus Zeindl. Since this software is released as free software, there could be additional authors, too. For detailed information about all authors of this software project, read the file "AUTHORS".
+Detailed information about all authors of this software project can be found in
+the file "AUTHORS".
 
 5 Conclusion
 ------------
 
-As a conclusion of this readme file, I would like to thank you for using this (and hopefully other) free software. Have a lot of fun and report bugs (if you find any) to mrszndl@googlemail.com in Enlish or German.
+As a conclusion of this readme file, I would like to thank you for using this 
+(and hopefully other) free software. Have a lot of fun and report bugs 
+(if you find any) to mrszndl@googlemail.com in Enlish or German.
 
