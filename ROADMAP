@@ -27,6 +27,11 @@ Version	| Description
 	   - add2jMemorize
 	   - other dictionaries
 	 Basic error catching and handling
+	 Distribution
+	  - maybe write a script which creates them automatically
+	   - create distributables for 
+	      - windows platforms
+	         - unix-like oses
 
 0.4	 Stable and extensible interface
 	 - About dialog

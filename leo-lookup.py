@@ -25,6 +25,7 @@ import sys
 # import gui packages
 import gtk
 import gobject
+#import gdk
 
 # import other needed or useful packages
 import urllib2
@@ -37,23 +38,26 @@ import datetime
 import llresultextractor2
 
 LOGFILENAME = "leo-lookup.log"
+HOMEDIR = "/home/bitmaster/source/python/gtk/leo-lookup/"
+IMGDIR = HOMEDIR+"images/"
 
 class leolookup:
     """Represents the program, with the window."""
-    version = "0.01"
+    version = "0.2dev"
 
     # searchLoc
     # -1        Englisch to German 
     #  0        Automatic
-    #  1        German to Englisch
-    url = "http://dict.leo.org/ende"
-    supportedfromLangs = [ "German", "English" ]
-    supportedtoLangs = [ "German", "English" ]
+    #  1        German to English
+    url = "http://dict.leo.org/"
+    supportedLangs = { "German":"de", "English" : "en", "Spanish" : "es", 
+                       "Italian" : "it", "French" : "fr", "Chinese" : "ch" }
 
     def __init__(self):
         logger = logging.getLogger('INIT')
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
-        self.window.set_size_request(430,420)
+        gtk.window_set_default_icon_from_file(IMGDIR+"icon.png")
+        self.window.set_size_request(490,420)
         self.window.set_title("leo-lookup Version " + self.version)
         self.window.connect("destroy", self.destroyWin)
 
@@ -66,12 +70,24 @@ class leolookup:
         self.box2 = gtk.HBox(False, 6)
         
 
-        # Create combo box for the language to translate from
         self.fromLangLabel = gtk.Label("From ")
         self.box2.pack_start(self.fromLangLabel, False, False, 0)
-        self.fromLang = gtk.combo_box_new_text()
-        for lang in self.supportedfromLangs:
-            self.fromLang.append_text(lang)
+
+        # Create combo box for the language to translate from
+        self.lstst_fromLang = gtk.ListStore(gtk.gdk.Pixbuf, str)
+        self.fromLang = gtk.ComboBox(self.lstst_fromLang)
+        cellpb = gtk.CellRendererPixbuf()
+        cellt  = gtk.CellRendererText()
+        self.fromLang.pack_start(cellpb, True)
+        self.fromLang.pack_start(cellt, True)
+        self.fromLang.add_attribute(cellpb, 'pixbuf', 0)
+        self.fromLang.add_attribute(cellt, 'text', 1)
+
+        # add languages to combobox
+        for lang in self.supportedLangs:
+            self.lstst_fromLang.append([gtk.gdk.pixbuf_new_from_file(
+                    IMGDIR+lang+".png"),
+                    lang])
         self.fromLang.set_active(0)
         self.box2.pack_start(self.fromLang, False, False, 0)
 
@@ -79,12 +95,21 @@ class leolookup:
         self.swapToFrom.connect("clicked", self.swapToFromClicked)
         self.box2.pack_start(self.swapToFrom, False, False, 0)
 
-        # Create combo box for the language to translate to
+
         self.toLangLabel = gtk.Label("to ")
         self.box2.pack_start(self.toLangLabel, False, False, 0)
-        self.toLang = gtk.combo_box_new_text()
-        for lang in self.supportedtoLangs:
-            self.toLang.append_text(lang)
+
+        # Create combo box for the language to translate to
+        self.lstst_toLang = gtk.ListStore(gtk.gdk.Pixbuf, str)
+        self.toLang = gtk.ComboBox(self.lstst_toLang)
+        self.toLang.pack_start(cellpb, True)
+        self.toLang.pack_start(cellt, True)
+        self.toLang.add_attribute(cellpb, 'pixbuf', 0)
+        self.toLang.add_attribute(cellt, 'text', 1)
+        for lang in self.supportedLangs:
+            self.lstst_toLang.append([gtk.gdk.pixbuf_new_from_file(
+                    IMGDIR+lang+".png"),
+                    lang])
         self.toLang.set_active(1)
         
         self.box2.pack_start(self.toLang, False, False, 0)
@@ -106,9 +131,9 @@ class leolookup:
         self.listOfMeanings = gtk.TreeView(self.meanings)
         self.listOfMeaningsCol = gtk.TreeViewColumn("Foreign Lang.")
         self.listOfMeanings.append_column(self.listOfMeaningsCol)
-        self.cell = gtk.CellRendererText()
-        self.listOfMeaningsCol.pack_start(self.cell, True)
-        self.listOfMeaningsCol.add_attribute(self.cell, 'text', 0)
+        cell = gtk.CellRendererText()
+        self.listOfMeaningsCol.pack_start(cell, True)
+        self.listOfMeaningsCol.add_attribute(cell, 'text', 0)
         
         self.listOfMeaningsCol2 = gtk.TreeViewColumn("Familiar Lang.")
         self.listOfMeanings.append_column(self.listOfMeaningsCol2)
@@ -140,15 +165,69 @@ class leolookup:
         logger.setLevel(logging.DEBUG)
 
         # check and define the search direction
-        lang1 = self.fromLang.get_active_text()
-        lang2 = self.toLang.get_active_text()
-        if lang1 == "English" and lang2 == "German":
+        lang1iter = self.fromLang.get_active_iter()
+        lang2iter = self.toLang.get_active_iter()
+
+        lang1 = self.lstst_fromLang[self.lstst_fromLang.get_path(lang1iter)][1]
+        lang2 = self.lstst_toLang[self.lstst_toLang.get_path(lang2iter)][1]
+        logger.debug("from language: %s" % (lang1))
+        logger.debug("to language: %s" % (lang2))
+
+        # the user has chosen two equal languages, which is nonsense
+        # (e. g. translation from German to German)
+        if lang1 == lang2:
+            messagedlg = gtk.MessageDialog(self.window, gtk.DIALOG_MODAL, gtk.MESSAGE_ERROR, 
+                                           gtk.BUTTONS_OK, "Translation in the same language makes no sense!")
+            messagedlg.set_title("Error!")
+            messagedlg.run()
+            messagedlg.destroy()
+            return
+
+        # determine where the foreign language is specified
+        if  lang2 == "German":
+            # (lang1 == foreign language)
             searchLoc = -1
-        elif lang1 == "German" and lang2 == "English":
+            pagename = self.supportedLangs[lang1] + "de"
+            self.foreignlang = lang1
+
+        elif lang1 == "German":
+            # (lang2 == foreign language)
             searchLoc = 1
+            pagename = self.supportedLangs[lang2] + "de"
+            self.foreignlang = lang2
+
         else:
+            logger.debug("Couldn't determine search direction, taking automatic mode.")
             searchLoc = 0
 
+
+        # Make boxes for header widgets (column one and two)
+#        head_col1 = gtk.HBox(False,2)
+#        head_col2 = gtk.HBox(False,2)
+
+        # construct box for foreign language column header
+
+#        flag = gtk.Image()
+#        flag.set_from_file(IMGDIR+self.foreignlang+".png")
+#        lbl = gtk.Label(self.foreignlang)
+#        head_col1.pack_start(flag, False, False, 0)
+#        head_col1.pack_start(lbl, False, False, 0)
+#        head_col1.show()
+
+        # construct box for German language column header 
+#        flag2 = gtk.Image()
+#        flag2.set_from_file(IMGDIR+"German.png")          
+#        lbl2 = gtk.Label("German")
+#        head_col2.pack_start(flag2, False, False, 0)
+#        head_col2.pack_start(lbl2, False, False, 0)
+#        head_col2.show()
+
+        # set headers of the columns
+        self.listOfMeaningsCol.set_title(self.foreignlang)
+        self.listOfMeaningsCol2.set_title("German")
+#        self.listOfMeaningsCol.set_widget(lbl)
+#        self.listOfMeaningsCol2.set_widget(lbl2)
+        
         # define arguments to be committed to the webserver, like
         # the word, we are looking up.
         args = {"relink" :"off", 
@@ -157,7 +236,7 @@ class leolookup:
 
         data = urllib.urlencode(args)
         # do communication with the webserver
-        request = urllib2.Request(self.url, data)
+        request = urllib2.Request(self.url+pagename, data)
         logger.info("Requesting from URL: %s" % (request.get_full_url() + '?'
                                                   + request.get_data()))
         response = urllib2.urlopen(request)

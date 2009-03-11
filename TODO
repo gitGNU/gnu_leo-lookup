@@ -1,18 +1,17 @@
 TODO for leo-lookup:
 ====================
 
-Target version: 0.1
+Target version: 0.2
 
 Tasks:
 ------
-
-d 1 Basic gui
-   d text field for translations
-   d general elements
-d 2 Basic functionality
-   d english to german lookup using urllib2
-    (see http://docs.python.org/howto/urllib2.html)
-    	   d use ll_resultextractor2.ResultExtractor in leo-lookup.py
-	   d check results parsed by ResultExtractor
-   d basic logging functionality using module logging
-    (see http://docs.python.org/library/logging.html)
+1 GUI enhancements
+ d list box for translations
+ d easy switching between languages and directions
+ d more sophisticated graphics
+   d flags for languages (e.g. German flag for German language)
+   d programme icon
+ d show the names of the language in list box below the look-up-button
+ 2 Function enhancemants
+ d  all languages supported by LEO should be accessible
+ d  report an error if the two selected languages are equal
