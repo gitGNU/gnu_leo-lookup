@@ -43,7 +43,7 @@ IMGDIR = HOMEDIR+"images/"
 
 class leolookup:
     """Represents the program, with the window."""
-    version = "0.2dev"
+    version = "0.2"
 
     # searchLoc
     # -1        Englisch to German 
