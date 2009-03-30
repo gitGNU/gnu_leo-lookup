@@ -1,0 +1,69 @@
+Thoughs about the plugin interface
+==================================
+
+Reasons why a plugin interface is suitable:
+-------------------------------------------
+
+- freedom to extend leo-lookup easily
+- more flexible
+
+
+Important notes:
+----------------
+
+- Use doxygen for documenting plugin structure.
+- It is a need to write important settings to a configfile (preferred as
+  xml)
+  - It is good to create a scheme definition (DTD) for the configfile, that
+    it is possible to view it in any xml-capable browser.
+
+
+
+Language specific notes:
+------------------------
+- if the plugin-files should be loaded as packages,
+  the subdirectory containing plugins (e.g. plugins/) has to contain
+  a file called "__init__.py", to make the python interpreter considering 
+  this directory to contain source files
+- functions like lookup() or something else can be hold in a general function
+  pointer.
+
+Implementing notes:
+-------------------
+
+plugins can be modules.
+
+Every module is automatically loaded by leo-lookup using eval().
+Two different kinds of plugins are neccesary:
+    - dictionaries
+    - flash-card file access
+
+
+Dictionaries:
+-------------
+To make sure which dictionary is used by leo-lookup, there should be 
+methods to examine which languages are provided by each plugin.
+An general access method is mandatory (e.g. lookup_word(word, lang, target_lang), get_provided_langs(), get_description())
+
+Flashcard-File Access plugins:
+------------------------------
+An example is a flashcard learning system called "jMemorize". It stores its 
+databases in gzip-compressed xml-files. The purpose of those plugins is to 
+add prevously queried words in this kind of files.
+
+Another flash-card program is pauker (sf.net), which uses xml-files too.
+
+Conceivable general methods for this type of plugins are 
+	  add_to_fc_file(words, files), 
+	  
+
+Note: Before adding those words, it has to be determined if it has been already
+      stored in this file (-> do not add doubles).
+
+      Plugin for jMemorize
+      --------------------
+
+It is possible to store the words in categories. There are two ways to handle
+with this issue:
+     - create a category named leo-lookup or
+     - ask the user after a category name (maybe he can choose from existing)
