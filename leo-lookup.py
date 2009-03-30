@@ -43,7 +43,7 @@ IMGDIR = HOMEDIR+"images/"
 
 class leolookup:
     """Represents the program, with the window."""
-    version = "0.2"
+    __version__ = "0.2"
 
     # searchLoc
     # -1        Englisch to German 
@@ -58,7 +58,7 @@ class leolookup:
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
         gtk.window_set_default_icon_from_file(IMGDIR+"icon.png")
         self.window.set_size_request(490,420)
-        self.window.set_title("leo-lookup Version " + self.version)
+        self.window.set_title("leo-lookup Version " + self.__version__)
         self.window.connect("destroy", self.destroyWin)
 
         self.box = gtk.VBox(False, 4)
@@ -152,13 +152,17 @@ class leolookup:
         
     
     def swapToFromClicked(self, *args):
-        """Will be executed if the user clicks on the swap button between the to combo boxes"""
+        """
+        Will be executed if the user clicks on the swap button between the to combo boxes. Makes the target language the source language and vice versa.
+        """
         temp = self.fromLang.get_active()
         self.fromLang.set_active(self.toLang.get_active())
         self.toLang.set_active(temp)
 
     def onTransClick(self, *args):
-        """Will be executed if the user clicks on the "Translate"-button"""
+        """
+        Will be executed if the user clicks on the "Translate"-button
+        """
 
         # initialize the logger
         logger = logging.getLogger('onTransClick')
@@ -255,24 +259,32 @@ class leolookup:
         eoIT = html.find("</table>", IoUT)
         soIT = html.rfind("<table", 1, eoIT)
         ipof = html[soIT:eoIT+8] # +8 adds the closing table-tag
-        # print ipof
-        # print "IoUT: %s\teoIT: %s\tsoIT: %s\t" % (IoUT, eoIT, soIT)
-        # xml_data = "<?xml version=\"1.0\"?>" + self.getTagsWoAttr(ipof)
-        # print xml_data
-        # dom1 = parseString(xml_data)
+        logger.debug(ipof)
+        logger.debug("IoUT: %s\teoIT: %s\tsoIT: %s\t" % (IoUT, eoIT, soIT))
+
+        # make instance of result extractor class and submit data
         myhtmlparser = llresultextractor2.ResultExtractor()
         myhtmlparser.feed(ipof)
         myhtmlparser.close()
+
+        # extract results from webpage
         results = myhtmlparser.getResults()
         self.meanings.clear()
         logger.debug(results)
+
+        # the last element of the gotten data stores the amount of results.
+        # put it in an extra variable and remove it from the list.
         successes = results.pop()
         logger.debug("successes: %s" % (successes))
+
+        # checks if we have got results
         if successes == 0:
             self.results.set_text("No results ")
         else:
             self.results.set_text("%s results " % (successes))
 
+        # adds result-pairs (other lang, german) and manage letters like
+        # äüö
         for pair in results:
             self.meanings.append([pair[0].decode("iso-8859-15"),pair[1].decode("iso-8859-15")])
             logger.debug(pair)
@@ -290,6 +302,7 @@ class leolookup:
             beg_attr = html[pos_attr_alt:end_attr].rfind(" ")
             html = html.replace(html[beg_attr:end_attr], "")
         return html
+
     def destroyWin(self, *args):
         """Will be executed if the user wants to close the window."""
         logger = logging.getLogger('DESTROY')
@@ -320,7 +333,7 @@ if __name__ == "__main__":
               'warning': logging.WARNING,
               'error': logging.ERROR,
               'critical': logging.CRITICAL}
-
+    # check if the user has specified a log-level
     if len(sys.argv) > 1:
         level_name = sys.argv[1]
         level = LEVELS.get(level_name, logging.NOTSET)

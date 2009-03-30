@@ -1,17 +1,19 @@
 TODO for leo-lookup:
 ====================
 
-Target version: 0.2
+Target version: 0.3
 
 Tasks:
 ------
-1 GUI enhancements
- d list box for translations
- d easy switching between languages and directions
- d more sophisticated graphics
-   d flags for languages (e.g. German flag for German language)
-   d programme icon
- d show the names of the language in list box below the look-up-button
- 2 Function enhancemants
- d  all languages supported by LEO should be accessible
- d  report an error if the two selected languages are equal
+1 Plugin interface
+   - sample plugins 
+     - add2jMemorize
+     - other dictionaries
+2 Basic error catching and handling
+3 Distribution
+   - maybe write a script which creates them automatically
+   - create distributables for 
+	 - windows platforms
+	 - unix-like oses
+4 GUI
+   - maybe introduce a menubar

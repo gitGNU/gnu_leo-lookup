@@ -22,16 +22,16 @@ Version	| Description
 	 2 Function enhancemants
 	 -  all languages supported by LEO should be accessible
 
-0.3	 Plugin interface
-	 - sample plugins 
+0.3	.1 Plugin interface
+	   - sample plugins 
 	   - add2jMemorize
 	   - other dictionaries
-	 Basic error catching and handling
-	 Distribution
-	  - maybe write a script which creates them automatically
-	   - create distributables for 
-	      - windows platforms
-	         - unix-like oses
+	.2 Basic error catching and handling
+	.3 Distribution
+	   - maybe write a script which creates them automatically
+	     - create distributables for 
+	        - windows platforms
+	       	  - unix-like oses
 
 0.4	 Stable and extensible interface
 	 - About dialog
@@ -40,6 +40,12 @@ Version	| Description
 	   - User Documentation
 	   - Technical documentation
 	 - Bugfixes
+	 - More sophisticated commandline interface
+	   - conceivable switches:
+	     > -s %s | --source-language %s | -d %s | --target-language %s
+	     > -h | --help
+	     > -l %s | -log-level %s
+	     > [word]
 	 - Enhanced error catching and handling
 	 - (optional) GNU gettext interface
 	  
