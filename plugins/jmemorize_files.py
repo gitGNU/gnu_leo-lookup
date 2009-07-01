@@ -25,6 +25,17 @@ import datetime
 import zipfile
 import xml.dom.minidom
 import xml.dom.minicompat
+import logging
+
+import gtk
+import gobject
+
+def __init__(uiman, treeselection):
+    """
+    Initialize the module.
+    """
+    jmf = jmemorize_files(uiman, treeselection)
+
 
 class jmemorize_files:
     """
@@ -33,16 +44,56 @@ class jmemorize_files:
     """
     filename = ""
     words2add = []
-    def __init__(self):
-        pass
+
+    # Define structure of menu entries, added by this plugin
+    new_mnuitems = """
+<ui>
+  <menubar name="Mainmenu">
+    <menu action="Extensions">
+      <menu action="jMemorize">
+	<menuitem name="open" action="openfile"/>
+	<menuitem name="close" action="closefile"/>
+	<menuitem name="add" action="addWords"/>
+      </menu>
+    </menu>
+  </menubar>
+</ui>
+"""
+
+
+    def __init__(self, uimanager, treeselection):
+        self.treeselection = treeselection
+        logger = logging.getLogger("jmemorize_files.py:INIT")
+        self.menubar_acts = [
+            ('Extensions', None, "_Extensions"),
+            
+            ('jMemorize', None, "_jMemorize"),
+
+            ('openfile', None, "Open Flashcard-File ...", None,
+             "Opens a flashcard file for adding words", self.openFileDlg),
+
+            ('closefile', None, "Close Flashcard-File ...", None,
+             "Closes an open flashcard file.", self.closeFileDlg),
+
+            ('addWords', None, "Add selected words ...", None,
+             "Adds selected words under a specified category.", self.addWordsDlg)
+            ]
+
+        self.actgroup = gtk.ActionGroup("LL_JMEMORIZE")
+        self.actgroup.add_actions(self.menubar_acts)
+        uimanager.insert_action_group(self.actgroup, 1)
+        uimanager.add_ui_from_string(self.new_mnuitems)
+        uimanager.ensure_update()
+        logger.info("jMemorize support is initialized.")
 
     def getSupportedExtensions(self):
         """
-        Returns supported file extensions with description.
+        Returns supported file extensions including description.
         """
-        return [("JMemorize Flashcard-Files (zipped)", "jml")
+        return [
+                ("JMemorize Flashcard-Files (zipped)", "jml"),
                 ("JMemorize Flashcard-Files",          "xml")
-                ]
+               ]
 
     def setTargetFile(self, file):
         if self.checkFile(file) == 0:
@@ -138,7 +189,8 @@ class jmemorize_files:
         Note: The cards will be added to the category "Alle"
         """
         # construct needed data
-        # TODO: manage time stamp
+        # TODO: manage time stamp,
+        #       custom category support
         aktuell = datetime.datetime.now()
         time = aktuell.time().strftime("%H:%M:%S")
         date = aktuell.date().strftime("%d-%b-%Y")
@@ -161,20 +213,29 @@ class jmemorize_files:
         # do the second step: change xml-data (add Card-tags)
         xmlpath = ["Lesson", "Category", "Deck" ]
         try:
+            # parse xml-file
             dom = xml.dom.minidom.parseString(lesson_xml)
             lesson_nd  = dom.getElementsByTagName(xmlpath[0])[0]
             categories = lesson_nd.getElementsByTagName(xmlpath[1])
             for category in categories:
+                # look for category with the name of defaultCategory
                 attrib = category.attributes["name"].firstChild
                 if attrib.wholeText == defaultCategory:
                     deck = category.getElementsByTagName(xmlpath[2])[0]
                     olddeck = deck
+                    # add words to deck
                     for card2add in cards2add:
                         deck.appendChild(card2add.firstChild)
                         #print "adding card: %s" % (card2add.firstChild.toxml())
+                    # replace old deck instance with the new.
                     dom.replaceChild(deck, olddeck)
                     break
-            new_jml = zipfile.ZipFile(os.curdir+os.sep+self.seperateFilenameAndPath()["filename"], mode="w", compression=zipfile.ZIP_DEFLATED)
+
+            # delete old zip file
+            os.remove(self.filename)
+
+            # create Zip-File and write the xml-file
+            new_jml = zipfile.ZipFile(self.filename, mode="w", compression=zipfile.ZIP_DEFLATED)
             new_jml.writestr("lesson.xml", dom.toxml().encode("UTF-8"))
             new_jml.close()
         except Exception:
@@ -202,6 +263,47 @@ class jmemorize_files:
         index = self.filename.rfind(os.sep)
         return { "path": self.filename[:index+1], 
                  "filename": self.filename[index+1:] }
+
+    def openFileDlg(self, *args):
+        supportedFiles = self.getSupportedExtensions()
+        opendlg = gtk.FileChooserDialog(title="Open Flashcard-File",
+                                        action=gtk.FILE_CHOOSER_ACTION_OPEN,
+                        buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                                 gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+
+        for type in supportedFiles:
+            filefilter = gtk.FileFilter()
+            filefilter.set_name(type[0])
+            filefilter.add_pattern("*." + type[1])
+            opendlg.add_filter(filefilter)
+
+        filefilter = gtk.FileFilter()
+        filefilter.set_name("All files")
+        filefilter.add_pattern("*")
+        opendlg.add_filter(filefilter)
+        
+        resp = opendlg.run()
+        if resp == gtk.RESPONSE_OK:
+            self.filename = opendlg.get_filename()
+        opendlg.destroy()
+        
+
+    def closeFileDlg(self, *args):
+        self.closeFile()
+        pass
+    
+    def addWordsDlg(self, *args):
+        logger = logging.getLogger("jmemorize_files.py:addWordsDlg:")
+        # Category?
+        (model, pathlist) = self.treeselection.get_selected_rows()
+        logger.debug("Printing selection:")
+        for selentry in pathlist:
+            iter = model.get_iter(selentry)
+            f_word = model.get_value(iter, 0)
+            n_word = model.get_value(iter, 1)
+            logger.debug("Foreign: %s\tNative: %s" % (f_word, n_word))
+            self.addWord(n_word, f_word)
+        pass
 
 
 if __name__ == "__main__":
@@ -240,4 +342,10 @@ if __name__ == "__main__":
         elif operation == "add":
             jmf.addWord(w2a[0], w2a[1])
         jmf.closeFile()
+    pass
+
+
+
+
+if __name__ != "__main__":
     pass
