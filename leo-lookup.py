@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-# leo-lookup - Utility to look up translations for a word using leo
+# leo-lookup - Utility to look up translations for a word using dict.leo.org
 # Copyright (C) 2009 Markus Zeindl <mrszndl@googlemail.com>
 #
 #
@@ -33,36 +33,79 @@ import urllib
 import logging
 import formatter
 import datetime
+import getopt
 
 # import own modules
 import llresultextractor2
+import plugins
+
+__path__ = "."
 
 LOGFILENAME = "leo-lookup.log"
 HOMEDIR = "/home/bitmaster/source/python/gtk/leo-lookup/"
 IMGDIR = HOMEDIR+"images/"
+PLUGINDIR = "plugins/"
 
 class leolookup:
-    """Represents the program, with the window."""
+    """Represents the programme, with the window."""
     __version__ = "0.2"
-
-    # searchLoc
-    # -1        Englisch to German 
-    #  0        Automatic
-    #  1        German to English
+    
     url = "http://dict.leo.org/"
     supportedLangs = { "German":"de", "English" : "en", "Spanish" : "es", 
                        "Italian" : "it", "French" : "fr", "Chinese" : "ch" }
 
+    menubardesc = """
+<ui>
+  <menubar name="Mainmenu">
+    <menu action="File">
+      <menuitem name="Quit" action="Quit" />
+    </menu>
+    <menu action="Extensions">
+      <separator/>
+      <menuitem name="Preferences" action="ext_prefs" />
+    </menu>
+    <menu action="Help">
+      <menuitem name="about" action="aboutdlg" />
+    </menu>
+  </menubar>
+</ui>
+"""
     def __init__(self):
         logger = logging.getLogger('INIT')
+        self.uimanager = gtk.UIManager()
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
         gtk.window_set_default_icon_from_file(IMGDIR+"icon.png")
         self.window.set_size_request(490,420)
         self.window.set_title("leo-lookup Version " + self.__version__)
         self.window.connect("destroy", self.destroyWin)
 
-        self.box = gtk.VBox(False, 4)
+        self.box = gtk.VBox(False, 5)
         
+        self.menubar_acts = [
+                             ('File', None, "_File"),
+                             ('Quit', gtk.STOCK_QUIT, "_Quit", None, 
+                              "Close Program", self.destroyWin),
+                             
+                             ('Extensions', None, "_Extensions"),
+                             ('ext_prefs', None, "_Preferences", None,
+                              "Set prefereences for extensions", None),
+
+                             ('Help', None, "_Help"),
+                             ('aboutdlg', None, "_About", None,
+                              "View informations about leo-lookup.", None)
+
+                             ]
+                             
+        self.actgroup = gtk.ActionGroup("LEO_LOOKUP")
+        self.actgroup.add_actions(self.menubar_acts)
+
+        accelgroup = self.uimanager.get_accel_group()
+        self.window.add_accel_group(accelgroup)
+        self.uimanager.add_ui_from_string(self.menubardesc)
+        self.uimanager.insert_action_group(self.actgroup, 0)
+        self.menubar = self.uimanager.get_widget("/Mainmenu")
+        self.box.pack_start(self.menubar, False)
+      
         self.word2lookup = gtk.Entry()
         self.word2lookup.set_text("Enter word to lookup here ...")
         self.box.pack_start(self.word2lookup, False, False, 0)
@@ -141,13 +184,23 @@ class leolookup:
         self.listOfMeaningsCol2.pack_start(cell2, True)
         self.listOfMeaningsCol2.add_attribute(cell2, 'text', 1)
 
+        self.lom_treesel = self.listOfMeanings.get_selection()
+        self.lom_treesel.set_mode(gtk.SELECTION_MULTIPLE)
 
         self.scrollcont.add(self.listOfMeanings)
         self.box.pack_start(self.scrollcont, True, True, 0)
 
+        self.box.show_all()
+
         self.window.add(self.box)
         logger.info("window constructed, let's make it visible ...")
         self.window.show_all()
+
+        logger.info("initializing plugin architecture ...")
+        pm = plugins.plugin_manager(self.uimanager,
+                                    self.lom_treesel,
+                                    PLUGINDIR)
+        pm.load_plugins()
         gtk.main()
         
     
@@ -325,7 +378,62 @@ class leolookup:
         return model[active][0]
 
 
+def getUIManager():
+    """
+    Returns the used UIManager for the mainwindow. This is needed by
+    installed plugins, to integrate themselves into mainmenu.
+    """
+    return self.uimanager
 
+def help_msg():
+    """
+    Prints a general help message, explaining the commandline-interface
+    of leo-lookup. Only used if user starts leo-lookup with the commandline
+    switch '-h'.
+    """
+    print """Usage: leo-lookup.py [OPTION]
+Search for translations of words using the online dictionary LEO.
+
+Available options:
+ -d, --debug=LEVEL     Specifies verbosity regarding debug messages.
+                       LEVEL can be 'debug', 'info', 'warning', 'error', 
+                       'critical' (default: 'warning').
+ -l, --logfile=FILE    Set the output file for logging messages 
+                       (default: 'leo-lookup.log').
+ -h, --help            Show this help message.
+
+Report bugs to <leo-lookup-feedback@nongnu.org> or go to
+'http://savannah.nongnu.org/bugs/?func=additem&group=leo-lookup'.
+"""
+
+def check_cwd(mainmod):
+    """
+    check if current working directory is leo-lookup's home directory
+    extract the path and filename of "leo-lookup.py", which has been 
+    launched
+    """
+    # mainmod represents the path and name of this file.
+    mainmod_path  = mainmod[:mainmod.rfind(os.sep)]
+    mainmod_fn    = mainmod[mainmod.rfind(os.sep)+1:]
+    
+    try:
+        # try to locate leo-lookup.py in the current working directory
+        # if this test fails, we can change to leo-lookup's home directory
+        os.stat(mainmod_fn)
+    except OSError:
+        os.chdir(mainmod_path)
+
+def check_usrdatadir():
+    """
+    Checks if the directory ~/.config/leo-lookup exists and creates
+    it if needed.
+    """
+    usrname = os.getlogin()
+    usrdatadir = "/home/" + usrname + "/.config/leo-lookup"
+    try:
+        os.stat(usrdatadir)
+    except OSError:
+        os.mkdir(usrdatadir)
 
 if __name__ == "__main__":
     LEVELS = {'debug': logging.DEBUG,
@@ -333,9 +441,32 @@ if __name__ == "__main__":
               'warning': logging.WARNING,
               'error': logging.ERROR,
               'critical': logging.CRITICAL}
+    # set loglevel warning as standard 
+    level_name = "warning"
+
+# not needed, since the feature of saving/loading preferences isn't 
+# implemented in leo-lookup, so far.
+#    check_usrdatadir()
+    check_cwd(sys.argv[0])
+
     # check if the user has specified a log-level
     if len(sys.argv) > 1:
-        level_name = sys.argv[1]
+
+        # parse commandline arguments
+        shopts = "hd:l:"
+        lngopts = [ "help", "debug=", "logfile=" ]
+        pars_args = getopt.gnu_getopt(sys.argv[1:], shopts, lngopts)
+        for pair in pars_args[0]:
+            if pair[0].endswith("help") or pair[0].endswith("h"):
+                help_msg()
+                exit(0)
+            elif pair[0].endswith("debug") or pair[0].endswith("d"):
+                level_name = pair[1]
+            elif pair[0].endswith("logfile") or pair[0].endswith("l"):
+                LOGFILENAME=pair[1]
+
+        # configure logging facility according to commandline args
+        
         level = LEVELS.get(level_name, logging.NOTSET)
         logging.basicConfig(filename=LOGFILENAME,level=level)
     else:
@@ -343,5 +474,8 @@ if __name__ == "__main__":
     curDateTime = datetime.datetime.isoformat(datetime.datetime.now())
     logging.info("\nlogging facility started on %s\t" % (curDateTime))
     logging.info("------------------------------")
-
+  
+    # launch main app
     app =  leolookup()
+
+
