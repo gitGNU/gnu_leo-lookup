@@ -6,9 +6,13 @@ Target version: 0.3
 Tasks:
 ------
 1 Plugin interface
+   d menubar to access plugin functionality
    - sample plugins 
      - add2jMemorize
+       - dialogs for opeing, closeing, and adding words
+       - support for custom categories
      - other dictionaries
+       (e.g. dict.cc)
 2 Basic error catching and handling
 3 Distribution
    - maybe write a script which creates them automatically
@@ -16,4 +20,4 @@ Tasks:
 	 - windows platforms
 	 - unix-like oses
 4 GUI
-   - maybe introduce a menubar
+   d maybe introduce a menubar
