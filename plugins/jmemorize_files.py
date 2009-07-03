@@ -44,6 +44,7 @@ class jmemorize_files:
     """
     filename = ""
     words2add = []
+    category = ""
 
     # Define structure of menu entries, added by this plugin
     new_mnuitems = """
@@ -195,6 +196,9 @@ class jmemorize_files:
         time = aktuell.time().strftime("%H:%M:%S")
         date = aktuell.date().strftime("%d-%b-%Y")
         timestamp = date + " " + time
+        
+        # set target category
+        #if 
         defaultCategory = "Alle"
         cards2add = []
         # convert word-pairs to jmemorize xml-flashcards 
@@ -293,6 +297,7 @@ class jmemorize_files:
         pass
     
     def addWordsDlg(self, *args):
+        
         logger = logging.getLogger("jmemorize_files.py:addWordsDlg:")
         # Category?
         (model, pathlist) = self.treeselection.get_selected_rows()
