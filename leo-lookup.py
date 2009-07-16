@@ -455,7 +455,12 @@ if __name__ == "__main__":
         # parse commandline arguments
         shopts = "hd:l:"
         lngopts = [ "help", "debug=", "logfile=" ]
-        pars_args = getopt.gnu_getopt(sys.argv[1:], shopts, lngopts)
+        try:
+            pars_args = getopt.gnu_getopt(sys.argv[1:], shopts, lngopts)
+        except getopt.GetoptError:
+            help_msg()
+            exit(-1)
+        
         for pair in pars_args[0]:
             if pair[0].endswith("help") or pair[0].endswith("h"):
                 help_msg()

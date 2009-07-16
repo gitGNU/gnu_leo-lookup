@@ -229,6 +229,9 @@ class jmemorize_files:
         # construct needed data
         # TODO: manage time stamp,
         #       custom category support
+
+        logger = logging.getLogger("jmemorize_files.py:flush")
+
         aktuell = datetime.datetime.now()
         time = aktuell.time().strftime("%H:%M:%S")
         date = aktuell.date().strftime("%d-%b-%Y")
@@ -240,8 +243,10 @@ class jmemorize_files:
         cards2add = []
         # convert word-pairs to jmemorize xml-flashcards 
         for word2add in self.words2add:
+            logger.debug("attempt to add '%s'" % (str(word2add)))
             xml_data4card = """<Card AmountLearnedBack="0" AmountLearnedFront="0" Backside="%s" DateCreated="%s" DateModified="%s" DateTouched="%s" Frontside="%s" TestsHit="0" TestsTotal="0"><Side/><Side/></Card>""" % (word2add[0], timestamp, timestamp, timestamp, word2add[1])
-            cards2add.append(xml.dom.minidom.parseString(xml_data4card))
+            cards2add.append((xml.dom.minidom.parseString(xml_data4card),
+                              word2add[2]))
         
         # do the first step: extract file lesson.xml
         try:
@@ -258,19 +263,19 @@ class jmemorize_files:
             dom = xml.dom.minidom.parseString(lesson_xml)
             lesson_nd  = dom.getElementsByTagName(xmlpath[0])[0]
             categories = lesson_nd.getElementsByTagName(xmlpath[1])
-            for category in categories:
-                # look for category with the name of defaultCategory
-                attrib = category.attributes["name"].firstChild
-                if attrib.wholeText == defaultCategory:
-                    deck = category.getElementsByTagName(xmlpath[2])[0]
-                    olddeck = deck
-                    # add words to deck
-                    for card2add in cards2add:
-                        deck.appendChild(card2add.firstChild)
+            for card2add in cards2add:
+                for category in categories:
+                    # look for category with the name of defaultCategory
+                    attrib = category.attributes["name"].firstChild
+                    if attrib.wholeText == card2add[1]:
+                        deck = category.getElementsByTagName(xmlpath[2])[0]
+                        olddeck = deck
+                        # add words to deck
+                        deck.appendChild(card2add[0].firstChild)
                         #print "adding card: %s" % (card2add.firstChild.toxml())
-                    # replace old deck instance with the new.
-                    dom.replaceChild(deck, olddeck)
-                    break
+                        # replace old deck instance with the new.
+                        dom.replaceChild(deck, olddeck)
+                        break
 
             # delete old zip file
             os.remove(self.filename)
@@ -512,6 +517,7 @@ class jmemorize_files:
         cb_category = gtk.ComboBox(mdl_categories)
         cb_category.pack_start(cellrend_text, True)
         cb_category.add_attribute(cellrend_text, 'text', 0)
+        cb_category.set_active(0)
         cat_hbox.pack_start(cb_category, False, False, 0)
         cat_hbox.show_all()
         aw_dialog.vbox.pack_start(cat_hbox, False, False, 0)
