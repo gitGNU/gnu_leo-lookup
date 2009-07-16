@@ -54,7 +54,7 @@ class jmemorize_files:
       <menu action="jMemorize">
 	<menuitem name="open" action="openfile"/>
 	<menuitem name="close" action="closefile"/>
-	<menuitem name="add" action="addWords"/>
+	<menuitem name="add" action="addWord"/>
       </menu>
     </menu>
   </menubar>
@@ -70,14 +70,14 @@ class jmemorize_files:
             
             ('jMemorize', None, "_jMemorize"),
 
-            ('openfile', None, "Open Flashcard-File ...", None,
+            ('openfile', None, "Open flashcard-file ...", None,
              "Opens a flashcard file for adding words", self.openFileDlg),
 
-            ('closefile', None, "Close Flashcard-File ...", None,
+            ('closefile', None, "Close flashcard-file ...", None,
              "Closes an open flashcard file.", self.closeFileDlg),
 
-            ('addWords', None, "Add selected words ...", None,
-             "Adds selected words under a specified category.", self.addWordsDlg)
+            ('addWord', None, "Add selection to flashcard-file ...", None,
+             "Adds selection as a word under a specified category.", self.addWordDlg)
             ]
 
         self.actgroup = gtk.ActionGroup("LL_JMEMORIZE")
@@ -130,11 +130,11 @@ class jmemorize_files:
         # if all tests succeeded, return zero
         return 0
         
-    def addWord(self, foreside, backside):
+    def addWord(self, foreside, backside, category=""):
         """
-        Adds words to the list of words to add.
+        Adds a word to the list of words to add.
         """
-        self.words2add.append((foreside, backside))
+        self.words2add.append((backside, foreside, category))
     
     def listWords(self):
         """
@@ -173,11 +173,48 @@ class jmemorize_files:
                     words.append((fs,bs))
         except Exception:
             print words
+            dom.unlink()
             return -4
         finally:
             dom.unlink()
 
         return words
+
+    def getCategories(self):
+        """
+        Return a list of existing categories, which are already stored in the
+        given file. TODO: Consider using ElementTree API, seems to be simpler
+        and more effective.
+        """
+        xmlpath = ["Lesson", "Category" ]
+        category_names = []
+        dom = xml.dom.minidom.Document()
+        lesson_xml = ""
+        try:
+            # open jml (zip) file
+            zf = zipfile.ZipFile(self.filename, mode="r")
+            # extract "lesson.xml", containing interesting data
+            lesson_xml = zf.read(zf.namelist()[0])
+            zf.close()
+        except BadZipFile:
+            return -2
+        
+        try:
+            dom = xml.dom.minidom.parseString(lesson_xml)
+            
+            nd = dom.getElementsByTagName(xmlpath[0])[0]
+            categories = nd.getElementsByTagName(xmlpath[1])
+            for category in categories:
+                attrib = category.attributes["name"].firstChild
+                category_names.append(attrib.wholeText)
+                attrib.unlink()
+        except Exception:
+            print category_names
+            return -4
+        finally:
+            dom.unlink()
+
+        return category_names
     
     def flush(self):
         """
@@ -198,7 +235,7 @@ class jmemorize_files:
         timestamp = date + " " + time
         
         # set target category
-        #if 
+#        if 
         defaultCategory = "Alle"
         cards2add = []
         # convert word-pairs to jmemorize xml-flashcards 
@@ -296,10 +333,19 @@ class jmemorize_files:
         self.closeFile()
         pass
     
-    def addWordsDlg(self, *args):
+    def addWordDlg(self, *args):
+        """
+        Will be executed if the user clicks on the menu-element "Add selection" in Extensions.
+        """
         
-        logger = logging.getLogger("jmemorize_files.py:addWordsDlg:")
-        # Category?
+        # Initialize logging facility for this method
+        logger = logging.getLogger("jmemorize_files.py:addWordDlg:")
+
+        # List for selected words 
+        # (content: tuples with foreign and native side)
+        selectedwords = []
+        
+
         (model, pathlist) = self.treeselection.get_selected_rows()
         logger.debug("Printing selection:")
         for selentry in pathlist:
@@ -307,8 +353,216 @@ class jmemorize_files:
             f_word = model.get_value(iter, 0)
             n_word = model.get_value(iter, 1)
             logger.debug("Foreign: %s\tNative: %s" % (f_word, n_word))
-            self.addWord(n_word, f_word)
-        pass
+            selectedwords.append((f_word, n_word))
+                
+       
+        # Category?
+
+        # get amount of words selected
+        self.amountOfSelWords = len(selectedwords)
+
+        # Create dialog
+        aw_dialog = gtk.Dialog(title = "Add selection to flashcard-file...",
+                               buttons = ("_Add %s words" % self.amountOfSelWords, 
+                                          gtk.RESPONSE_OK,
+                                        "Cancel", gtk.RESPONSE_CANCEL))
+        logger.debug("Children of aw_dialog.action_area: %s" % (aw_dialog.action_area.get_children()))
+        aw_dialog.set_size_request(780, 500)
+
+        self.chkb_joinwords = gtk.CheckButton(label = "_Join expressions to one word")
+        self.chkb_joinwords.connect("toggled", self.joinwords_cb, aw_dialog.action_area.get_children()[1])
+
+        self.chkb_joinwords.show()
+        aw_dialog.vbox.pack_start(self.chkb_joinwords, False, False, 0)
+        
+        # Create a horizontal widget container with two elements
+        hbox = gtk.HBox(2)
+
+        # Create widgets for foreign words
+        # At first prepare the table for foreign words
+        add_fw_lst_store = gtk.ListStore(gobject.TYPE_BOOLEAN, 
+                                         gobject.TYPE_STRING)
+        
+        # Add foreign words and make them checked by default
+        for sel_word in selectedwords:
+            add_fw_lst_store.append((True, sel_word[0]))
+        
+        # create list-widget
+        self.add_fw_tree_view = gtk.TreeView(add_fw_lst_store)
+
+        # Prepare first column, which controls, which words
+        # should be joined
+        cellrend_toggle_fw = gtk.CellRendererToggle()
+        cellrend_toggle_fw.set_property("activatable", True)
+        cellrend_toggle_fw.connect('toggled', 
+                                     self.adddlg_toggled_callback,
+                                     add_fw_lst_store,
+                                     0)        
+
+        add_fw_tvcol0 = gtk.TreeViewColumn('included?',
+                                           cellrend_toggle_fw,
+                                           active=0)
+       
+        # enable the user to sort using this column
+        add_fw_tvcol0.set_sort_column_id(0)
+
+        # Prepare second column, which displays words only
+        cellrend_text = gtk.CellRendererText()
+        add_fw_tvcol1 = gtk.TreeViewColumn('Word', 
+                                           cellrend_text, 
+                                           text=1 )
+
+        # enable the user to sort using this column
+        add_fw_tvcol1.set_sort_column_id(1)
+
+        self.add_fw_tree_view.append_column(add_fw_tvcol0)
+        self.add_fw_tree_view.append_column(add_fw_tvcol1)        
+
+        self.add_fw_tree_view.set_size_request(235, 350)
+        self.add_fw_tree_view.show()
+
+        # Make the table scrollable
+        scrollwind_fw = gtk.ScrolledWindow()
+        scrollwind_fw.set_policy(gtk.POLICY_AUTOMATIC,gtk.POLICY_AUTOMATIC)
+        scrollwind_fw.add(self.add_fw_tree_view)
+        scrollwind_fw.show()
+
+        frm_foreign_side = gtk.Frame(label="Foreign words")
+        frm_foreign_side.add(scrollwind_fw)
+        frm_foreign_side.show()
+
+
+        # Pack tree view in hbox
+        hbox.pack_start(frm_foreign_side, True, True, 5)
+
+
+        # Create widgets for native words
+        # At first prepare the data-table for native words
+        add_nw_lst_store = gtk.ListStore(gobject.TYPE_BOOLEAN, 
+                                         gobject.TYPE_STRING)
+        
+        # Add native words and make them checked by default
+        for sel_word in selectedwords:
+            add_nw_lst_store.append((None, sel_word[1]))
+        
+        # create list-widget
+        self.add_nw_tree_view = gtk.TreeView(add_nw_lst_store)
+
+        # Prepare first column, which controls, which words
+        # should be joined
+        cellrend_toggle_nw = gtk.CellRendererToggle()
+        cellrend_toggle_nw.set_property("activatable", True)
+        cellrend_toggle_nw.connect('toggled', 
+                                self.adddlg_toggled_callback,
+                                add_nw_lst_store,
+                                0)        
+
+        add_nw_tvcol0 = gtk.TreeViewColumn('included?',
+                                           cellrend_toggle_nw,
+                                           active=0)
+       
+        # enable the user to sort using this column
+        add_nw_tvcol0.set_sort_column_id(0)
+
+        # Prepare second column, which displays words only
+#        cellrend_text = gtk.CellRendererText()
+        add_nw_tvcol1 = gtk.TreeViewColumn('Word', 
+                                           cellrend_text, 
+                                           text=1 )
+
+        # enable the user to sort using this column
+        add_nw_tvcol1.set_sort_column_id(1)
+
+        self.add_nw_tree_view.append_column(add_nw_tvcol0)
+        self.add_nw_tree_view.append_column(add_nw_tvcol1)        
+
+        self.add_nw_tree_view.set_size_request(235, 350)
+        self.add_nw_tree_view.show()
+
+        # Make the table scrollable
+        scrollwind_nw = gtk.ScrolledWindow()
+        scrollwind_nw.set_policy(gtk.POLICY_AUTOMATIC,gtk.POLICY_AUTOMATIC)
+        scrollwind_nw.add(self.add_nw_tree_view)
+        scrollwind_nw.show()
+
+        frm_native_side = gtk.Frame(label="Native words")
+        frm_native_side.add(scrollwind_nw)
+        frm_native_side.show()
+
+
+        hbox.pack_start(frm_native_side, True, True, 5)
+        hbox.show()
+
+
+        aw_dialog.vbox.pack_start(hbox, True, True, 5)
+
+
+        # Create and display widgets for choosing the target category
+        cat_hbox = gtk.HBox(2)
+
+        label_cat = gtk.Label("Category:")
+        cat_hbox.pack_start(label_cat, False, False, 0)
+
+        # since a list-store is needed for the combobox, create it and
+        # fill it with needed data
+        mdl_categories = gtk.ListStore(str)
+        for cat in self.getCategories():
+            mdl_categories.append([cat])
+        
+        cb_category = gtk.ComboBox(mdl_categories)
+        cb_category.pack_start(cellrend_text, True)
+        cb_category.add_attribute(cellrend_text, 'text', 0)
+        cat_hbox.pack_start(cb_category, False, False, 0)
+        cat_hbox.show_all()
+        aw_dialog.vbox.pack_start(cat_hbox, False, False, 0)
+        
+        # Create and display Checkbox "Check for duplicates"
+        chkb_duplicates = gtk.CheckButton(label = "_Check for duplicates")
+        chkb_duplicates.show()
+        aw_dialog.vbox.pack_start(chkb_duplicates, False, False, 0)
+        
+        
+        # call callback to disable widgets for joining words
+        self.chkb_joinwords.emit("toggled")
+
+        # Show dialog
+        resp = aw_dialog.run()
+
+        if resp == gtk.RESPONSE_OK:
+            target_catiter = cb_category.get_active_iter()
+            target_category = mdl_categories[mdl_categories.get_path(target_catiter)][0]
+            for s_word in selectedwords:
+                self.addWord(s_word[0], s_word[1], target_category)
+
+        aw_dialog.destroy()
+        return
+    
+
+    def adddlg_toggled_callback(self,cell, path, model=None, col_num=0):
+        logger = logging.getLogger("jmemorize_files.py:adddlg_toogled_callback") 
+        iter = model.get_iter(path)
+        logger.debug("---------------------------------")
+        logger.debug("adddlg_toggled_callback data:")
+        logger.debug("cell: %s\t%s\npath: %s\t%s\nmodel: %s\t%s\ncol_num: %s\t%s" % (cell, type(cell), path, type(path), model, type(model), col_num, type(col_num)))
+
+        oldvalue = model.get(iter, col_num)[0]
+        logger.debug("changing from %s to %s" % (oldvalue, not oldvalue))
+        model.set_value(iter, col_num, not oldvalue)
+        logger.info("word toggled")
+        return
+
+    def joinwords_cb(self, checkbutton, button):
+        if self.chkb_joinwords.get_active():
+            button.set_label("Add word")
+            self.add_fw_tree_view.set_sensitive(True)
+            self.add_nw_tree_view.set_sensitive(True)
+        else:
+            button.set_label("Add %s words" % (self.amountOfSelWords))
+            self.add_nw_tree_view.set_sensitive(False)
+            self.add_fw_tree_view.set_sensitive(False)
+
+
+        return
 
 
 if __name__ == "__main__":

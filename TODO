@@ -9,14 +9,16 @@ Tasks:
    d menubar to access plugin functionality
    - sample plugins 
      - add2jMemorize
-       - dialogs for opeing, closeing, and adding words
+       - join menu items open, add, close to add words, which is more
+         convinient for users
+       - FIXME: not possible to add words to an empty file
        - support for custom categories
      - other dictionaries
        (e.g. dict.cc)
 2 Basic error catching and handling
 3 Distribution
    - maybe write a script which creates them automatically
-   - create distributables for 
+   - create distributions for 
 	 - windows platforms
 	 - unix-like oses
 4 GUI

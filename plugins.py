@@ -51,17 +51,21 @@ class plugin_manager(object):
         if len(path) == 0:
             logger.warning("Invalid plugin-path. Skipping plugins ...")
             return
-                       
+                     
         logger.info("Loading plugins:")
         for file in os.listdir(path):
             if file.endswith(".py"):
                 logstr = "- %s :  " % (file)
                 self.all_plugins.append(file)
-                pl = __import__(path+file[:len(file)-3])
-                pl.__init__(self.uimanager, self.treeselection)
-                self.loaded.append(pl)
-                logstr = logstr + "ok"
+                try:
+                    pl = __import__(path+file[:len(file)-3])
+                    pl.__init__(self.uimanager, self.treeselection)
+                    self.loaded.append(pl)
+                    logstr = logstr + "ok"
+                except ImportError:
+                    logstr = logstr + "failed"
                 logger.info(logstr)
+
                 
         logger.info('Following plugins have been found:\n %s' % (self.all_plugins))
         logger.info('Following plugins have been loaded:\n %s' % 
