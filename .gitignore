@@ -1,0 +1,6 @@
+*~
+*.pyc
+*.aux
+*.dvi
+*.log
+planning/*

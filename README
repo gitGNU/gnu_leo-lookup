@@ -40,7 +40,7 @@ Once you have started leo-lookup,
 3 License
 ---------
 
-leo-lookup is licensed under the term of the GNU General Public License Version
+leo-lookup is licensed under the terms of the GNU General Public License Version
 3 or (at your opinion) any later version. For details see file "LICENSE" or
 read the terms of license online (http://www.gnu.org/).
 
@@ -55,5 +55,7 @@ the file "AUTHORS".
 
 As a conclusion of this readme file, I would like to thank you for using this 
 (and hopefully other) free software. Have a lot of fun and report bugs 
-(if you find any) to mrszndl@googlemail.com in Enlish or German.
+(if you find any) to the public bug-tracking feature of 
+https://savannah.nongnu.org/task/?group=leo-lookup&func=additem 
+in Enlish or German.
 

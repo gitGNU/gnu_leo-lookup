@@ -344,7 +344,7 @@ class jmemorize_files:
         """
         
         # Initialize logging facility for this method
-        logger = logging.getLogger("jmemorize_files.py:addWordDlg:")
+        logger = logging.getLogger("jmemorize_files.py:addWordDlg")
 
         # List for selected words 
         # (content: tuples with foreign and native side)
@@ -365,7 +365,17 @@ class jmemorize_files:
 
         # get amount of words selected
         self.amountOfSelWords = len(selectedwords)
+        if self.amountOfSelWords == 0:
+            message = """You haven't selected anything.
+Please select words you wish to add."""
 
+            msgdlg = gtk.MessageDialog(buttons=gtk.BUTTONS_OK, 
+                                       message_format=message)
+                                       
+            msgdlg.run()
+            msgdlg.destroy()
+            return
+        
         # Create dialog
         aw_dialog = gtk.Dialog(title = "Add selection to flashcard-file...",
                                buttons = ("_Add %s words" % self.amountOfSelWords, 
@@ -511,8 +521,8 @@ class jmemorize_files:
         # since a list-store is needed for the combobox, create it and
         # fill it with needed data
         mdl_categories = gtk.ListStore(str)
-        for cat in self.getCategories():
-            mdl_categories.append([cat])
+        for category in self.getCategories():
+            mdl_categories.append([category])
         
         cb_category = gtk.ComboBox(mdl_categories)
         cb_category.pack_start(cellrend_text, True)
@@ -535,10 +545,46 @@ class jmemorize_files:
         resp = aw_dialog.run()
 
         if resp == gtk.RESPONSE_OK:
+            # examine target category
             target_catiter = cb_category.get_active_iter()
             target_category = mdl_categories[mdl_categories.get_path(target_catiter)][0]
-            for s_word in selectedwords:
-                self.addWord(s_word[0], s_word[1], target_category)
+
+            # should selection be joined?
+            if self.chkb_joinwords.get_active():
+                # define word lists containing words to join
+                foreign = []
+                foreign_j = ""
+                native = []
+                native_j = ""
+
+                # iterate over data model (list store oject) 
+                # of foreign words, check demand and add it to foreign
+                for lst_entry in add_fw_lst_store:
+                    ent_values = list(lst_entry)
+                    if ent_values[0]:
+                        foreign.append(ent_values[1]+ ", ")
+                logger.info("Foreign words to be joined: %s\n" % (str(foreign)))
+
+                # do the same thing for native words too
+                for lst_entry in add_nw_lst_store:
+                    ent_values = list(lst_entry)
+                    if ent_values[0]:
+                        native.append(ent_values[1] + ", ")
+                logger.info("Native words to be joined: %s\n" % (str(native)))
+                # join the prepared words now and cut last comma out
+                foreign_j = "".join(foreign)
+                foreign_j = foreign_j[:len(foreign_j)-2]
+                native_j = "".join(native)
+                native_j = native_j[:len(native_j)-2]             
+                logger.info("Wordentry to be added:\n%s\n%s" % (foreign_j,
+                                                                native_j))
+
+                # finally add the joined words
+                self.addWord(foreign_j, native_j, target_category)
+
+            else:
+                for s_word in selectedwords:
+                    self.addWord(s_word[0], s_word[1], target_category)
 
         aw_dialog.destroy()
         return
