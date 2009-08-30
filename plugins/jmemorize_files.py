@@ -18,6 +18,7 @@
 #
 # Copyright (C) 2009 Markus Zeindl <mrszndl@googlemail.com>
 
+# TODO: Line 587
 
 import os
 import sys
@@ -152,7 +153,7 @@ class jmemorize_files:
             # extract "lesson.xml", containing interesting infos
             lesson_xml = zf.read(zf.namelist()[0])
             zf.close()
-        except BadZipFile:
+        except zipfile.BadZipFile:
             return -2
         
         try:
@@ -399,8 +400,11 @@ Please select words you wish to add."""
                                          gobject.TYPE_STRING)
         
         # Add foreign words and make them checked by default
+        checked = True
         for sel_word in selectedwords:
-            add_fw_lst_store.append((True, sel_word[0]))
+                add_fw_lst_store.append((checked, sel_word[0]))
+                checked = False
+                
         
         # create list-widget
         self.add_fw_tree_view = gtk.TreeView(add_fw_lst_store)
@@ -458,7 +462,7 @@ Please select words you wish to add."""
         
         # Add native words and make them checked by default
         for sel_word in selectedwords:
-            add_nw_lst_store.append((None, sel_word[1]))
+            add_nw_lst_store.append((True, sel_word[1]))
         
         # create list-widget
         self.add_nw_tree_view = gtk.TreeView(add_nw_lst_store)
@@ -534,6 +538,7 @@ Please select words you wish to add."""
         
         # Create and display Checkbox "Check for duplicates"
         chkb_duplicates = gtk.CheckButton(label = "_Check for duplicates")
+        chkb_duplicates.set_active(True)
         chkb_duplicates.show()
         aw_dialog.vbox.pack_start(chkb_duplicates, False, False, 0)
         
@@ -579,12 +584,42 @@ Please select words you wish to add."""
                 logger.info("Wordentry to be added:\n%s\n%s" % (foreign_j,
                                                                 native_j))
 
-                # finally add the joined words
-                self.addWord(foreign_j, native_j, target_category)
+                # process "check for duplicates"
+                # TODO: Implement "Check for duplicates feature" for
+                #       adding more words
+                if chkb_duplicates.get_active():              
+                    if self.producesDuplicates((foreign_j, native_j)):
+                        message = "If you proceed, you will produce duplicate words in flashcard file.\nDo you really want to continue?"
+
+                        msgdlg = gtk.MessageDialog(parent = None, 
+                                                   message_format = message,
+                                                   buttons = gtk.BUTTONS_YES_NO,
+                                                   type = gtk.MESSAGE_QUESTION)
+                        ret_val = msgdlg.run()
+                        if ret_val == gtk.RESPONSE_YES:
+                            # finally add the joined words
+                            self.addWord(foreign_j, native_j, target_category)
+                else:
+                    # if there are no duplicates proceed adding the word
+                    self.addWord(foreign_j, native_j, target_category)
 
             else:
                 for s_word in selectedwords:
-                    self.addWord(s_word[0], s_word[1], target_category)
+                    if chkb_duplicates.get_active():              
+                        if self.producesDuplicates((s_word[0], s_word[1])):
+                            message = "If you proceed, you will produce duplicate words in flashcard file.\nDo you really want to continue?"
+                            
+                            msgdlg = gtk.MessageDialog(parent = None, 
+                                                       message_format = message,
+                                                       buttons = gtk.BUTTONS_YES_NO,
+                                                       type = gtk.MESSAGE_QUESTION)
+                            ret_val = msgdlg.run()
+                            if ret_val == gtk.RESPONSE_YES:
+                                # finally add the joined words
+                                self.addWord(s_word[0], s_word[1], target_category)
+                        else:
+                            # if there are no duplicates proceed adding the word
+                            self.addWord(s_word[0], s_word[1], target_category)
 
         aw_dialog.destroy()
         return
@@ -615,6 +650,25 @@ Please select words you wish to add."""
 
 
         return
+    def producesDuplicates(self, word2add):
+        """
+        Checks if the attempt to add the given word would produce duplicate
+        saved word in the target falshcard-file.
+        """
+        duplicate_words = []
+        # get words already saved in flashcard file and
+        # compare every value of them with the word, the user
+        # wants to add
+        exist_words = self.listWords()
+        for exist_word in exist_words:
+            if word2add[0] == exist_word[0] or word2add[1] == exist_word[1]:
+               duplicate_words.append((exist_word[0], exist_word[1]))
+        if len(duplicate_words) > 0:
+            return True
+        else:
+            return False
+    
+        
 
 
 if __name__ == "__main__":
@@ -642,7 +696,7 @@ if __name__ == "__main__":
         if args[0].endswith(".jml"):
             fn = args[0]
         
-        jmf = jmemorize_files()
+        jmf = jmemorize_files(None, None)
         if jmf.setTargetFile(fn):
             print "- File %s seems to be ok." % (fn)
 
